@@ -1,4 +1,4 @@
-{
+b{
     "token": "",
     "language": "en",
     "prefix": "!",
@@ -30,7 +30,7 @@
     },
      "lavalink": {
         "lavalink": {
-            "identifier": "SnowDalguna",
+            "identifier": "Avinan",
             "password": "avinan",
             "host": "new-york-node-1.vortexcloud.xyz",
             "port": 9323,
