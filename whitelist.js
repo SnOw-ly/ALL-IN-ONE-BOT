@@ -1,0 +1,101 @@
+require("dotenv").config();
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require("discord.js");
+const { Rcon } = require("rcon-client");
+
+const bot = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ]
+});
+
+const rconConfig = {
+    host: "your.minecraft.server.ip",
+    port: 25575,
+    password: process.env.RCON_PASSWORD,
+};
+
+const CONSOLE_CHANNEL_ID = "1350361295828029520"; // Replace with the ID of your console channel
+
+bot.once("ready", () => {
+    console.log(`${bot.user.tag} is online!`);
+});
+
+bot.on("interactionCreate", async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    const userId = interaction.user.id;
+    const consoleChannel = bot.channels.cache.get(CONSOLE_CHANNEL_ID);
+
+    if (interaction.customId === "whitelist_bedrock" || interaction.customId === "whitelist_java") {
+        await interaction.reply({ content: "Enter your **Minecraft username**:", ephemeral: true });
+
+        const filter = (msg) => msg.author.id === userId;
+        const collector = interaction.channel.createMessageCollector({ filter, time: 15000, max: 1 });
+
+        collector.on("collect", async (msg) => {
+            const username = msg.content.trim();
+            try {
+                const rcon = await Rcon.connect(rconConfig);
+                await rcon.send(`whitelist add ${username}`);
+                await rcon.end();
+
+                await interaction.followUp({ content: `✅ **${username}** has been whitelisted!`, ephemeral: true });
+
+                if (consoleChannel) {
+                    consoleChannel.send(`📜 **Whitelist Command Executed:** \`whitelist add ${username}\``);
+                }
+            } catch (error) {
+                console.error(error);
+                await interaction.followUp({ content: "❌ Failed to add player to the whitelist.", ephemeral: true });
+            }
+            msg.delete();
+        });
+    } else if (interaction.customId === "remove_whitelist") {
+        await interaction.reply({ content: "Enter your **Minecraft username** to remove:", ephemeral: true });
+
+        const filter = (msg) => msg.author.id === userId;
+        const collector = interaction.channel.createMessageCollector({ filter, time: 15000, max: 1 });
+
+        collector.on("collect", async (msg) => {
+            const username = msg.content.trim();
+            try {
+                const rcon = await Rcon.connect(rconConfig);
+                await rcon.send(`whitelist remove ${username}`);
+                await rcon.end();
+
+                await interaction.followUp({ content: `❌ **${username}** has been removed from the whitelist!`, ephemeral: true });
+
+                if (consoleChannel) {
+                    consoleChannel.send(`📜 **Whitelist Command Executed:** \`whitelist remove ${username}\``);
+                }
+            } catch (error) {
+                console.error(error);
+                await interaction.followUp({ content: "❌ Failed to remove player from the whitelist.", ephemeral: true });
+            }
+            msg.delete();
+        });
+    }
+});
+
+// Send whitelist message with buttons
+bot.on("messageCreate", async (message) => {
+    if (message.content === "!whitelistpanel") {
+        const embed = new EmbedBuilder()
+            .setTitle("🛡 Minecraft Whitelist System")
+            .setDescription("Click the buttons below to whitelist your account or remove it.")
+            .setColor("Blue");
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("whitelist_bedrock").setLabel("📱 PE/Bedrock").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("whitelist_java").setLabel("💻 PC/Java").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("remove_whitelist").setLabel("⛔ Remove Whitelist").setStyle(ButtonStyle.Danger)
+        );
+
+        await message.channel.send({ embeds: [embed], components: [row] });
+    }
+});
+
+bot.login(process.env.BOT_TOKEN);
