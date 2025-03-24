@@ -1,3 +1,4 @@
+{ 
 require("dotenv").config();
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require("discord.js");
 const { Rcon } = require("rcon-client");
@@ -99,3 +100,4 @@ bot.on("messageCreate", async (message) => {
 });
 
 bot.login(process.env.BOT_TOKEN);
+}
